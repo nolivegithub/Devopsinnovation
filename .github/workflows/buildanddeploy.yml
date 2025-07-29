@@ -71,6 +71,7 @@ jobs:
         key: ${{ secrets.AWS_SSH_KEY }}
         envs: TAG,DOCKER_HUB_USERNAME
         script: |
+          sudo su
           cd /home/ubuntu/Devopsinnovation
           git pull origin main
 
