@@ -1,0 +1,96 @@
+name: Build and Deploy to AWS
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGISTRY: docker.io
+  DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
+    - name: Set tag
+      run: echo "TAG=sha-${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+    - name: Build and push backend
+      env:
+        TAG: ${{ env.TAG }}
+      run: |
+        docker build -t $REGISTRY/${{ secrets.DOCKER_HUB_USERNAME }}/schedule-backend:${TAG} -f backend/Dockerfile .
+        docker push $REGISTRY/${{ secrets.DOCKER_HUB_USERNAME }}/schedule-backend:${TAG}
+
+    - name: Build and push frontend
+      env:
+        TAG: ${{ env.TAG }}
+      run: |
+        docker build -t $REGISTRY/${{ secrets.DOCKER_HUB_USERNAME }}/schedule-frontend:${TAG} -f frontend/Dockerfile ./frontend
+        docker push $REGISTRY/${{ secrets.DOCKER_HUB_USERNAME }}/schedule-frontend:${TAG}
+
+    - name: Save tag for downstream job
+      run: echo "${TAG}" > image-tag.txt
+
+    - name: Upload tag artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: image-tag
+        path: image-tag.txt
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ needs.build.result == 'success' }}
+
+    steps:
+    - name: Download image tag artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: image-tag
+
+    - name: Read image tag
+      id: tag
+      run: |
+        TAG=$(cat image-tag.txt)
+        echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+    - name: Deploy to AWS via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.AWS_HOST }}
+        username: ubuntu
+        key: ${{ secrets.AWS_SSH_KEY }}
+        envs: TAG,DOCKER_HUB_USERNAME
+        script: |
+          cd /home/ubuntu/Devops
+          git pull origin main
+
+          echo "==== docker-compose-prod.yml BEFORE ===="
+          cat docker-compose-prod.yml
+
+          # Replace only the tag part for backend
+          sed -i -E "s|(image:.*${DOCKER_HUB_USERNAME}/schedule-backend:)[^\"'\ ]*|\1${TAG}|" docker-compose-prod.yml
+          # Replace only the tag part for frontend
+          sed -i -E "s|(image:.*${DOCKER_HUB_USERNAME}/schedule-frontend:)[^\"'\ ]*|\1${TAG}|" docker-compose-prod.yml
+
+          echo "==== docker-compose-prod.yml AFTER ===="
+          cat docker-compose-prod.yml
+
+          # Validate docker-compose file before proceeding
+          sudo docker compose -f docker-compose-prod.yml config
+
+          sudo docker compose -f docker-compose-prod.yml pull
+          sudo docker compose -f docker-compose-prod.yml down
+          sudo docker compose -f docker-compose-prod.yml up -d --remove-orphans
+      env:
+        TAG: ${{ env.TAG }}
+        DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}

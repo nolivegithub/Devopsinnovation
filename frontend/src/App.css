@@ -1,0 +1,83 @@
+:root {
+  --background-color: #ffffff;
+  --text-color: #333333;
+  --primary-color: #2196F3;
+  --cell-background: #ffffff;
+  --border-color: #e0e0e0;
+}
+
+[data-theme='dark'] {
+  --background-color: #1a1a1a;
+  --text-color: #ffffff;
+  --primary-color: #64b5f6;
+  --cell-background: #2d2d2d;
+  --border-color: #404040;
+}
+
+.App {
+  text-align: center;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  transition: all 0.3s ease;
+}
+
+/* Syncfusion Schedule Dark Mode Overrides */
+[data-theme='dark'] .e-schedule {
+  background-color: var(--background-color) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme='dark'] .e-schedule .e-schedule-toolbar,
+[data-theme='dark'] .e-schedule .e-vertical-view,
+[data-theme='dark'] .e-schedule .e-month-view {
+  background-color: var(--cell-background) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme='dark'] .e-schedule .e-month-view .e-work-cells,
+[data-theme='dark'] .e-schedule .e-month-view .e-date-header-wrap {
+  background-color: var(--cell-background) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .e-schedule .e-month-view .e-work-cells:hover {
+  background-color: var(--primary-color) !important;
+  opacity: 0.1;
+}
+
+[data-theme='dark'] .e-schedule .e-month-view .e-date-header,
+[data-theme='dark'] .e-schedule .e-month-view .e-work-cells {
+  border-color: var(--border-color) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

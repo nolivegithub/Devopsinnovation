@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: testdb
+    ports:
+      - "5433:5432"
+
+  backend:
+    image: ishimwejeanluc/schedule-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/testdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    expose:
+      - "8080"
+
+  frontend:
+    image: ishimwejeanluc/schedule-frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    depends_on:
+      - frontend
+      - backend
